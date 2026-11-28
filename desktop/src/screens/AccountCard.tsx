@@ -324,7 +324,7 @@ export function AccountCard({ account, status }: { account: Account; status: Car
   const reasons = platform?.supply.reasons ?? [];
   return (
     <article
-      className={cn("flex flex-col gap-2.5 rounded-[10px] border border-line bg-page px-4 py-3.5", attention && "border-[color-mix(in_srgb,var(--bad)_45%,var(--line))]")}
+      className={cn("flex flex-col gap-2.5 rounded-xl border border-line bg-card px-4 py-3.5", attention && "border-[color-mix(in_srgb,var(--bad)_45%,var(--line))]")}
       aria-label={`${names.name} ${maskEmail(account.email)}`.trim()}
     >
       <div className="flex items-center gap-2.5">

@@ -14,7 +14,7 @@ export function DialogContent({ className, children, ...props }: React.Component
       <DialogPrimitive.Content
         aria-describedby={undefined}
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 flex w-[420px] max-w-[calc(100%-32px)] -translate-x-1/2 -translate-y-1/2 flex-col gap-2.5 rounded-xl border border-line bg-page p-5 text-fg shadow-pop outline-none",
+          "fixed top-1/2 left-1/2 z-50 flex w-[420px] max-w-[calc(100%-32px)] -translate-x-1/2 -translate-y-1/2 flex-col gap-2.5 rounded-xl border border-line-strong bg-card p-5 text-fg shadow-pop outline-none",
           className,
         )}
         {...props}

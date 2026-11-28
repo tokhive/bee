@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "What the main window may do: listen for Bee's state, call the app's own commands, choose a credential file to import, open web links and read dropped files' paths.",
+  "description": "What the main window may do: listen for Bee's state, call the app's own commands, choose a credential file to import, open web links, read dropped files' paths and move the window by its title areas.",
   "windows": ["main"],
-  "permissions": ["core:default", "dialog:allow-open", "opener:default"]
+  "permissions": ["core:default", "core:window:allow-start-dragging", "dialog:allow-open", "opener:default"]
 }

@@ -49,7 +49,7 @@ async function refresh() {
 
 function loadSettings(): Settings {
   const saved = JSON.parse(localStorage.getItem("bee-dev-settings") ?? "{}");
-  const settings = { autostart: true, keep_in_tray: true, notify: true, language: "system", ...saved };
+  const settings = { autostart: true, keep_in_tray: true, notify: true, language: "system", theme: "system", prevent_sleep: false, sidebar_collapsed: false, ...saved };
   const system = navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en";
   return { ...settings, resolved_language: settings.language === "system" ? system : settings.language, tray_available: true };
 }
@@ -91,6 +91,25 @@ export const devShell: Shell = {
   },
   async openLogs() {
     window.alert("open_logs");
+  },
+  // A few made-up lines, so the log page can be worked on.
+  async readLog() {
+    const now = new Date();
+    const at = (s: number) => new Date(now.getTime() - s * 1000).toISOString();
+    return {
+      path: "(browser preview)/bee.log",
+      own: true,
+      lines: [
+        `time=${at(90)} level=INFO msg="connected to hive" service=bee hive=https://console.tokhive.ai`,
+        `time=${at(60)} level=INFO msg="capabilities reported" service=bee platform=claude windows=3`,
+        `time=${at(40)} level=WARN msg="quota window near limit" service=bee platform=claude used_percent=91`,
+        `time=${at(20)} level=ERROR msg="token refresh failed" service=bee platform=claude status=400`,
+        `time=${at(5)} level=INFO msg="relay session closed" service=bee platform=openai duration=28s`,
+      ],
+    };
+  },
+  onMenu() {
+    return () => {};
   },
   async retryService() {
     await refresh();

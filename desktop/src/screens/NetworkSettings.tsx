@@ -116,7 +116,7 @@ export function NetworkSettings() {
                 setDraft(e.target.value);
                 setResult(null);
               }}
-              className="min-w-[220px] flex-1 rounded-md border border-line bg-page px-2 py-1 font-mono text-[13px] text-fg"
+              className="min-w-[220px] flex-1 rounded-lg border border-line-strong bg-card px-2.5 py-1 font-mono text-[13px] text-fg"
             />
             <Button variant="secondary" disabled={busy !== ""} onClick={test}>
               {busy === "test" ? t.network.testing : t.network.test}

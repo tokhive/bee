@@ -3,7 +3,7 @@
 //! in a file the person can open and send along with a diagnostic report.
 
 use std::fs::{File, OpenOptions};
-use std::io;
+use std::io::{self, Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 
 /// The log is rotated once at this size: the old one is kept as bee.log.1.
@@ -40,6 +40,40 @@ pub fn open(dir: &Path) -> io::Result<File> {
     options.open(path)
 }
 
+/// How much of a log file the window's log page reads from its end.
+const TAIL_BYTES: u64 = 1024 * 1024;
+
+/// The last lines of a file, oldest first. A line cut by where reading began
+/// is left out; a missing file has no lines.
+fn file_tail(path: &Path, max: usize) -> Vec<String> {
+    let Ok(mut file) = File::open(path) else { return Vec::new() };
+    let len = file.metadata().map(|m| m.len()).unwrap_or(0);
+    let start = len.saturating_sub(TAIL_BYTES);
+    let mut raw = Vec::new();
+    if file.seek(SeekFrom::Start(start)).is_err() || file.read_to_end(&mut raw).is_err() {
+        return Vec::new();
+    }
+    let text = String::from_utf8_lossy(&raw);
+    let mut lines: Vec<&str> = text.lines().collect();
+    if start > 0 && !lines.is_empty() {
+        lines.remove(0);
+    }
+    let from = lines.len().saturating_sub(max);
+    lines[from..].iter().map(|line| line.to_string()).collect()
+}
+
+/// The last `max` lines of bee.log in dir, reaching back into the rotated
+/// bee.log.1 when the current log is shorter.
+pub fn tail(dir: &Path, max: usize) -> Vec<String> {
+    let mut lines = file_tail(&dir.join("bee.log"), max);
+    if lines.len() < max {
+        let mut older = file_tail(&dir.join("bee.log.1"), max - lines.len());
+        older.append(&mut lines);
+        lines = older;
+    }
+    lines
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -68,6 +102,32 @@ mod tests {
         writeln!(open(&dir).unwrap(), "fresh").unwrap();
         assert_eq!(std::fs::read_to_string(dir.join("bee.log")).unwrap(), "fresh\n");
         assert_eq!(std::fs::metadata(dir.join("bee.log.1")).unwrap().len(), ROTATE_AT);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn tail_reads_the_last_lines_and_reaches_into_the_rotated_log() {
+        let dir = scratch("tail");
+        assert!(tail(&dir, 5).is_empty());
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("bee.log.1"), "old 1\nold 2\nold 3\n").unwrap();
+        std::fs::write(dir.join("bee.log"), "new 1\nnew 2\n").unwrap();
+        assert_eq!(tail(&dir, 1), vec!["new 2"]);
+        assert_eq!(tail(&dir, 4), vec!["old 2", "old 3", "new 1", "new 2"]);
+        assert_eq!(tail(&dir, 10).len(), 5);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn tail_of_a_large_log_drops_the_cut_line() {
+        let dir = scratch("tail-large");
+        std::fs::create_dir_all(&dir).unwrap();
+        let line = "x".repeat(99);
+        let body: String = (0..20_000).map(|i| format!("{i:05} {line}\n")).collect();
+        std::fs::write(dir.join("bee.log"), &body).unwrap();
+        let lines = tail(&dir, 100_000);
+        assert!(lines.len() < 20_000 && lines.iter().all(|l| l.len() == 105));
+        assert_eq!(lines.last().unwrap(), &format!("19999 {line}"));
         std::fs::remove_dir_all(dir).unwrap();
     }
 

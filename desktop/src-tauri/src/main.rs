@@ -6,6 +6,7 @@ mod alerts;
 mod control;
 mod logs;
 mod occupied;
+mod power;
 mod service;
 mod settings;
 mod state;
@@ -21,7 +22,7 @@ use settings::{Settings, SettingsChange, Store};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tauri::image::Image;
-use tauri::menu::{Menu, MenuItem};
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::tray::TrayIconBuilder;
 use tauri::{AppHandle, Emitter, Manager, RunEvent, WindowEvent};
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
@@ -51,6 +52,8 @@ struct Shared {
     updates: updates::Updates,
     /// The app's own data directory, once known.
     data_dir: Mutex<Option<PathBuf>>,
+    /// Holds off idle sleep while an account shares, if the person asked.
+    awake: power::Awake,
 }
 
 /// Whether this desktop shows tray icons. GNOME shows none unless an
@@ -162,7 +165,11 @@ async fn refresh(app: &AppHandle, shared: &Shared) {
             }
         }
     }
-    let language = shared.settings.lock().unwrap().resolved_language();
+    let (language, prevent_sleep) = {
+        let settings = shared.settings.lock().unwrap();
+        (settings.resolved_language(), settings.prevent_sleep)
+    };
+    shared.awake.set(prevent_sleep && power::sharing(&platforms));
     let mut snapshot = Snapshot::in_language(service, overview, platforms, language);
     // No Bee answers, yet something holds the device configuration: an older
     // Bee that serves no control interface. The app's own Bee cannot start.
@@ -313,6 +320,21 @@ fn open_logs(app: AppHandle) -> Result<(), control::ControlError> {
     app.opener().open_path(dir.display().to_string(), None::<&str>).map_err(|err| failed(err.to_string()))
 }
 
+#[derive(serde::Serialize)]
+struct LogTail {
+    path: String,
+    lines: Vec<String>,
+    /// False while a Bee the app did not start runs: its log goes elsewhere.
+    own: bool,
+}
+
+/// The last lines of the log the app keeps of its own Bee.
+#[tauri::command]
+fn read_log(shared: tauri::State<'_, Arc<Shared>>, lines: usize) -> LogTail {
+    let dir = logs::dir();
+    LogTail { path: dir.join("bee.log").display().to_string(), lines: logs::tail(&dir, lines.clamp(1, 10_000)), own: shared.service.state() != ServiceState::External }
+}
+
 /// Asks where to save Bee's diagnostic report and saves it there; None when
 /// the person cancels. When Bee cannot be reached, the report says so and
 /// carries what the app knows, so there is still something to send.
@@ -420,6 +442,9 @@ fn set_settings(app: AppHandle, shared: tauri::State<'_, Arc<Shared>>, change: S
         result.map_err(|err| format!("autostart: {err}"))?;
     }
     save_settings(&shared, &updated);
+    if change.prevent_sleep.is_some() {
+        shared.refresh.notify_one();
+    }
     if change.language.is_some() {
         // The tray's words follow the language: the fixed items now, the
         // summary with the next read, which this asks for.
@@ -428,6 +453,7 @@ fn set_settings(app: AppHandle, shared: tauri::State<'_, Arc<Shared>>, change: S
             let _ = open.set_text(words.open);
             let _ = quit.set_text(words.quit);
         }
+        set_app_menu(&app, updated.resolved_language());
         shared.refresh.notify_one();
     }
     Ok(settings_view(&shared))
@@ -445,6 +471,111 @@ fn menu_words(language: &str) -> MenuWords {
     } else {
         MenuWords { starting: "正在启动后台服务…", open: "打开 Bee", quit: "退出" }
     }
+}
+
+/// The words of the app menu.
+struct AppMenuWords {
+    settings: &'static str,
+    edit: &'static str,
+    view: &'static str,
+    window: &'static str,
+    pages: [&'static str; 4],
+    refresh: &'static str,
+}
+
+fn app_menu_words(language: &str) -> AppMenuWords {
+    if language == "en" {
+        AppMenuWords { settings: "Settings…", edit: "Edit", view: "View", window: "Window", pages: ["Dashboard", "Shared accounts", "Logs", "Settings"], refresh: "Refresh" }
+    } else {
+        AppMenuWords { settings: "设置…", edit: "编辑", view: "显示", window: "窗口", pages: ["仪表盘", "共享账号", "日志", "设置"], refresh: "刷新" }
+    }
+}
+
+/// The window's pages, in the order of the sidebar and of ⌘1–⌘4.
+const PAGES: [&str; 4] = ["dashboard", "accounts", "logs", "settings"];
+
+/// macOS's menu bar for the app: the usual Bee, Edit and Window menus, and a
+/// View menu with the window's pages (⌘1–⌘4) and Refresh (⌘R). Settings is
+/// also ⌘, in the Bee menu. Quit (⌘Q) quits as the Dock does, stopping the
+/// app's own Bee. Elsewhere there is no menu bar.
+fn build_app_menu(app: &AppHandle, language: &str) -> tauri::Result<Menu<tauri::Wry>> {
+    let w = app_menu_words(language);
+    let sep = || PredefinedMenuItem::separator(app);
+    let settings = MenuItem::with_id(app, "menu:settings", w.settings, true, Some("CmdOrCtrl+,"))?;
+    let bee = Submenu::with_items(
+        app,
+        "Bee",
+        true,
+        &[
+            &PredefinedMenuItem::about(app, None, None)?,
+            &sep()?,
+            &settings,
+            &sep()?,
+            &PredefinedMenuItem::hide(app, None)?,
+            &PredefinedMenuItem::hide_others(app, None)?,
+            &PredefinedMenuItem::show_all(app, None)?,
+            &sep()?,
+            &PredefinedMenuItem::quit(app, None)?,
+        ],
+    )?;
+    let edit = Submenu::with_items(
+        app,
+        w.edit,
+        true,
+        &[
+            &PredefinedMenuItem::undo(app, None)?,
+            &PredefinedMenuItem::redo(app, None)?,
+            &sep()?,
+            &PredefinedMenuItem::cut(app, None)?,
+            &PredefinedMenuItem::copy(app, None)?,
+            &PredefinedMenuItem::paste(app, None)?,
+            &PredefinedMenuItem::select_all(app, None)?,
+        ],
+    )?;
+    let pages: Vec<MenuItem<tauri::Wry>> = PAGES
+        .iter()
+        .zip(w.pages)
+        .enumerate()
+        .map(|(i, (page, name))| MenuItem::with_id(app, format!("menu:{page}"), name, true, Some(format!("CmdOrCtrl+{}", i + 1).as_str())))
+        .collect::<tauri::Result<_>>()?;
+    let refresh = MenuItem::with_id(app, "menu:refresh", w.refresh, true, Some("CmdOrCtrl+R"))?;
+    let separator = sep()?;
+    let fullscreen = PredefinedMenuItem::fullscreen(app, None)?;
+    let mut view_items: Vec<&dyn tauri::menu::IsMenuItem<tauri::Wry>> = pages.iter().map(|item| item as &dyn tauri::menu::IsMenuItem<tauri::Wry>).collect();
+    view_items.extend([&separator as &dyn tauri::menu::IsMenuItem<tauri::Wry>, &refresh, &fullscreen]);
+    let view = Submenu::with_items(app, w.view, true, &view_items)?;
+    let window = Submenu::with_items(
+        app,
+        w.window,
+        true,
+        &[&PredefinedMenuItem::minimize(app, None)?, &PredefinedMenuItem::close_window(app, None)?, &sep()?, &PredefinedMenuItem::bring_all_to_front(app, None)?],
+    )?;
+    Menu::with_items(app, &[&bee, &edit, &view, &window])
+}
+
+fn set_app_menu(app: &AppHandle, language: &str) {
+    if !cfg!(target_os = "macos") {
+        return;
+    }
+    match build_app_menu(app, language) {
+        Ok(menu) => {
+            let _ = app.set_menu(menu);
+        }
+        Err(err) => eprintln!("[bee-desktop] app menu not built: {err}"),
+    }
+}
+
+/// An app menu item: show the window on a page, or read Bee again.
+fn app_menu_event(app: &AppHandle, id: &str) {
+    let Some(action) = id.strip_prefix("menu:") else { return };
+    if action == "refresh" {
+        app.state::<Arc<Shared>>().refresh.notify_one();
+    } else if PAGES.contains(&action) {
+        show_main(app);
+    } else {
+        return;
+    }
+    let _ = app.emit("bee://menu", action);
 }
 
 /// Closing the window: keep Bee in the tray, minimise where there is no tray,
@@ -493,6 +624,7 @@ fn main() {
         tray_available: tray_available(),
         updates: updates::Updates::new(),
         data_dir: Mutex::new(None),
+        awake: power::Awake::default(),
     });
     let background = std::env::args().any(|arg| arg == BACKGROUND_ARG);
 
@@ -505,7 +637,8 @@ fn main() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(shared.clone())
-        .invoke_handler(tauri::generate_handler![get_state, bee_request, quit_app, get_settings, set_settings, retry_service, restart_service, app_info, open_logs, export_diagnostics, update_status, check_update, install_update])
+        .invoke_handler(tauri::generate_handler![get_state, bee_request, quit_app, get_settings, set_settings, retry_service, restart_service, app_info, open_logs, read_log, export_diagnostics, update_status, check_update, install_update])
+        .on_menu_event(|app, event| app_menu_event(app, event.id.as_ref()))
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
@@ -546,6 +679,7 @@ fn main() {
             } else {
                 show_main(app.handle());
             }
+            set_app_menu(app.handle(), shared.settings.lock().unwrap().resolved_language());
             let words = menu_words(shared.settings.lock().unwrap().resolved_language());
             let status = MenuItem::with_id(app, "status", words.starting, false, None::<&str>)?;
             let open = MenuItem::with_id(app, "open", words.open, true, None::<&str>)?;

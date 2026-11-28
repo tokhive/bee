@@ -3,7 +3,10 @@ import { createRoot } from "react-dom/client";
 import { App } from "./app/App";
 import { tauriShell } from "./lib/tauriShell";
 import { devShell } from "./lib/devShell";
+import { applySavedTheme } from "./lib/theme";
 import "./index.css";
+
+applySavedTheme();
 
 // In the app the Rust shell answers; in a plain browser during development a
 // stand-in reads the mock Bee through the dev server.

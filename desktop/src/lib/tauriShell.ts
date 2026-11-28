@@ -5,7 +5,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { open } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { toBeeError, type Shell, type Snapshot, type UpdateState } from "./bee";
+import { toBeeError, type LogTail, type MenuAction, type Shell, type Snapshot, type UpdateState } from "./bee";
 
 function subscribe(start: () => Promise<UnlistenFn>): () => void {
   let stopped = false;
@@ -55,6 +55,8 @@ export const tauriShell: Shell = {
       throw toBeeError(err);
     }
   },
+  readLog: (lines) => invoke<LogTail>("read_log", { lines }),
+  onMenu: (listener) => subscribe(() => listen<MenuAction>("bee://menu", (event) => listener(event.payload))),
   retryService: () => invoke("retry_service"),
   restartService: () => invoke<boolean>("restart_service"),
   async exportDiagnostics() {
